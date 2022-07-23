@@ -14,6 +14,9 @@ class FaceExtractor final
 {
 public:
 
+    static inline const cv::Point2f DesiredLeftEye { 0.3155687451f, 0.46157411169f };
+    static inline const cv::Size InputSize { 112, 112 };
+
     using Embedding = std::vector<float>;
 
     FaceExtractor(const fs::path& modelpath, bool enableGpu = false);

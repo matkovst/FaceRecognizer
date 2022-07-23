@@ -10,7 +10,6 @@ namespace
 
 constexpr double ScaleAlpha { 1.0 / 127.5 };
 constexpr double ScaleBeta { -0.5 / 0.5 };
-const cv::Size InputSize { 112, 112 };
 
 /* Convert cv::Mat to torch::Tensor */
 void matToTensor(const cv::Mat& in, torch::Tensor& out)
@@ -64,8 +63,11 @@ FaceExtractor::Embedding FaceExtractor::extract(const cv::Mat& faceImage)
     /* Pre-process */
 
     // 1. Resize
-    cv::Mat resizedImage;
-    cv::resize(faceImage, resizedImage, InputSize, 0.0, 0.0, cv::INTER_CUBIC);
+    cv::Mat resizedImage; // ACHTUNG! can be ref or deep copy.
+    if (faceImage.size() == InputSize)
+        resizedImage = faceImage;
+    else
+        cv::resize(faceImage, resizedImage, InputSize, 0.0, 0.0, cv::INTER_CUBIC);
 
     // 2. Normalize
     cv::Mat normalizedImage; // float32

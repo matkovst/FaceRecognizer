@@ -130,13 +130,28 @@ int main(int argc, char *argv[])
 
         // 1. Detect faces
         const auto faceDetectionResults = faceDetector.detect(frame, minConfidence);
-        
-        // 2. Extract face embeddings
-        std::vector<cv::Mat> faceImages;
-        faceImages.reserve(faceDetectionResults.size());
+
+        // 2.0. Crop and align faces
+        std::vector<cv::Mat> alignedFaceCrops;
+        alignedFaceCrops.reserve(faceDetectionResults.size());
         for (const auto& faceDetectionResult : faceDetectionResults)
-            faceImages.emplace_back(frame(faceDetectionResult.boundingBox).clone());
-        const auto faceEmbeddings = faceExtractor.extract(faceImages);
+        {
+            const cv::Mat faceCrop = frame(faceDetectionResult.boundingBox);
+            if (getAngleBetweenEyes(faceDetectionResult.landmarks) > 45.0)
+            {
+                const cv::Mat alignedFaceCrop = alignFace(
+                    frame, faceDetectionResult.boundingBox, faceDetectionResult.landmarks, 
+                    FaceExtractor::InputSize, FaceExtractor::DesiredLeftEye);
+                alignedFaceCrops.emplace_back(alignedFaceCrop.clone());
+            }
+            else
+            {
+                alignedFaceCrops.emplace_back(faceCrop.clone());
+            }
+        }
+        
+        // 2.1. Extract face embeddings
+        const auto faceEmbeddings = faceExtractor.extract(alignedFaceCrops);
 
         // 3. Identify faces
         std::vector<Face> faces;
