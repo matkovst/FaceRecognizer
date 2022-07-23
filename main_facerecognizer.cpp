@@ -17,13 +17,19 @@ namespace fs = std::filesystem;
 
 const std::string ProgramName { "FaceRecognizer" };
 const std::string CommandLineParams =
+
+    /* Main parameters */
     "{ help h usage ?    |      | print this message }"
-    "{ @input i          |   0   | input video or stream }"
-    "{ @persons_file p   |       | path to file with person embeddings }"
+    "{ @input i          |   0  | input video or stream }"
+    "{ @persons_file p   |      | path to file with person embeddings }"
     "{ @detector_path d  |   ../../data/yolov5s-face.onnx   | path to face detection model }"
     "{ @recognizer_path r|   ../../data/adaface_ir18_vgg2.torchscript   | path to face recognition model }"
+
+    /* Auxilary parameters */
     "{ conf              |   0.25   | minimal detection confidence }"
     "{ sim_thr           |   0.25   | minimal similarity }"
+    "{ gpu               |   0      | enable gpu }"
+    "{ input_scale       |   1.0    | input resolution scale }"
     ;
 
 int main(int argc, char *argv[])
@@ -49,6 +55,8 @@ int main(int argc, char *argv[])
     const auto recognizerPath = parser.get<std::string>("@recognizer_path");
     const auto minConfidence = parser.get<float>("conf");
     const auto minSimilarity = parser.get<float>("sim_thr");
+    const auto enableGpu = static_cast<bool>(parser.get<int>("gpu"));
+    const auto inputScale = parser.get<float>("input_scale");
     
     /* Fetch existing embeddings from disk */
     std::vector<std::string> personNames;
@@ -91,8 +99,8 @@ int main(int argc, char *argv[])
     }
     
     /* Initialize general stuff */
-    FaceDetector faceDetector(detectorPath);
-    FaceExtractor faceExtractor(recognizerPath);
+    FaceDetector faceDetector(detectorPath, enableGpu);
+    FaceExtractor faceExtractor(recognizerPath, enableGpu);
 
     /* Capture input */
     cv::VideoCapture capture;
@@ -115,6 +123,9 @@ int main(int argc, char *argv[])
         if (frame.empty())
             break;
 
+        if (1.0 != inputScale)
+            cv::resize(frame, frame, cv::Size(), inputScale, inputScale);
+
         /* NN magic */
 
         // 1. Detect faces
@@ -135,15 +146,15 @@ int main(int argc, char *argv[])
             int nameId = -1;
             float sim = -1.0f;
             std::string name = "unknown";
-            if (personEmbeddings.size() > 0)
+            if (personEmbeddings.size() > 0) // if embeddings were loaded from disk
             {
-                const auto [bestId, bestSim] = mostSimilar(personEmbeddings, faceEmbeddings[i]);
+                const auto [bestId, bestSim] = searchMostSimilarEmbedding(personEmbeddings, faceEmbeddings[i]);
                 if (bestSim >= minSimilarity)
                 {
                     nameId = bestId;
-                    sim = bestSim;
                     name = personNames[bestId];
                 }
+                sim = bestSim;
             }
 
             faces.emplace_back(

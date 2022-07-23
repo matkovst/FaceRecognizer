@@ -40,11 +40,11 @@ float cosineSimilarity(const std::vector<float>& a, const std::vector<float>& b)
     return static_cast<float>(dot / (std::sqrt(denomA) * std::sqrt(denomB) + 1e-6));
 }
 
-std::pair<int, float> mostSimilar(
+std::pair<int, float> searchMostSimilarEmbedding(
     const Matr& embeddings, const std::vector<float>& newComerEmbedding)
 {
     if (embeddings.empty() || newComerEmbedding.empty())
-        throw std::runtime_error("mostSimilar: Empty vector");
+        throw std::runtime_error("searchMostSimilarEmbedding: Empty vector");
 
     int bestId = 0;
     float bestSim = -1.0f;

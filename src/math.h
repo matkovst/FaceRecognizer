@@ -9,7 +9,7 @@ Matr matMult(const Matr& a, const Matr& b);
 
 float cosineSimilarity(const std::vector<float>& a, const std::vector<float>& b);
 
-std::pair<int, float> mostSimilar(
+std::pair<int, float> searchMostSimilarEmbedding(
     const Matr& embeddings, const std::vector<float>& newComerEmbedding);
 
 std::vector<float> avgEmbedding(const Matr& embeddings);

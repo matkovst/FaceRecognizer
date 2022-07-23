@@ -24,7 +24,7 @@ public:
         ~DetectionResult();
     };
 
-    FaceDetector(const fs::path& modelpath);
+    FaceDetector(const fs::path& modelpath, bool enableGpu = false);
     ~FaceDetector();
 
     std::vector<DetectionResult> detect(const cv::Mat& image, float minConfidence = 0.45f);

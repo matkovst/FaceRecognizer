@@ -8,10 +8,9 @@
 namespace
 {
 
-constexpr double InputScale { 1.0 / 255.0 };
-const cv::Size InputSize { 112, 112 };
 constexpr double ScaleAlpha { 1.0 / 127.5 };
 constexpr double ScaleBeta { -0.5 / 0.5 };
+const cv::Size InputSize { 112, 112 };
 
 /* Convert cv::Mat to torch::Tensor */
 void matToTensor(const cv::Mat& in, torch::Tensor& out)
@@ -23,9 +22,24 @@ void matToTensor(const cv::Mat& in, torch::Tensor& out)
 
 }
 
-FaceExtractor::FaceExtractor(const fs::path& modelpath)
+FaceExtractor::FaceExtractor(const fs::path& modelpath, bool enableGpu)
     : m_device(torch::DeviceType::CPU)
 {
+    /* Check CUDA availability */
+    m_device = (enableGpu) ? torch::DeviceType::CUDA : torch::DeviceType::CPU;
+    if (torch::kCUDA == m_device)
+    {
+        if (torch::cuda::is_available())
+        {
+            m_device = torch::DeviceType::CUDA;
+        }
+        else
+        {
+            m_device = torch::DeviceType::CPU;
+            std::cout << "FaceExtractor: LibTorch CUDA is not available! Switching calculations to CPU ..." << std::endl;
+        }
+    }
+
     try
     {
         // De-serialize ScriptModule from file

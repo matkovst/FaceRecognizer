@@ -25,11 +25,16 @@ FaceDetector::DetectionResult::DetectionResult(
 FaceDetector::DetectionResult::~DetectionResult() = default;
 
 
-FaceDetector::FaceDetector(const fs::path& modelpath)
+FaceDetector::FaceDetector(const fs::path& modelpath, bool enableGpu)
 {
     try
     {
         m_model = cv::dnn::readNet(modelpath.string());
+        if (enableGpu) // dummy-style without checking GPU availability.
+        {
+            m_model.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
+            m_model.setPreferableTarget(cv::dnn::DNN_TARGET_CUDA);
+        }
         m_unconnectedLayersNames = m_model.getUnconnectedOutLayersNames();
     }
     catch(const cv::Exception& e)
