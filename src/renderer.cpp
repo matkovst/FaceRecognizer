@@ -1,6 +1,10 @@
-#include "renderer.h"
+#define _USE_MATH_DEFINES
+#include <cmath>
 
 #include <opencv2/imgproc.hpp>
+
+#include "math.h"
+#include "renderer.h"
 
 namespace
 {
@@ -75,7 +79,7 @@ void renderFaces(cv::Mat& out, std::vector<Face> faces)
             out, cv::Rect(
                 face.boundingBox.x + face.boundingBox.width + 1, 
                 face.boundingBox.y, 
-                140, 
+                150, 
                 (face.boundingBox.height > 80) ? face.boundingBox.height : 80), 
             cv::Scalar::all(0), 
             0.4);
@@ -90,5 +94,22 @@ void renderFaces(cv::Mat& out, std::vector<Face> faces)
         cv::putText(
             out, cv::format("cosine: %.2f", face.similarity), 
             origin += offset, cv::FONT_HERSHEY_PLAIN, 1.2, nameColor, 1);
+
+        // Render roll circle
+        
+        const int radius = 25;
+        origin += (2 * offset);
+        const cv::Point circleCenter = origin + cv::Point(radius, 0);
+        cv::circle(out, circleCenter, radius, FaceColor, 2);
+
+        const float faceRoll = getAngleBetweenEyes(face.landmarks) * M_PI/180.0;
+        const cv::Matx22f R( std::cos(faceRoll), -std::sin(faceRoll), std::sin(faceRoll), std::cos(faceRoll) );
+        const cv::Vec2f v = R * cv::Vec2f(0.0f, 1.0f); // (unit-length)
+        const cv::Point pt1 = circleCenter;
+        const cv::Point pt2 = circleCenter - cv::Point(v[0] * radius, v[1] * radius);
+        cv::arrowedLine(out, pt1, pt2, FaceColor, 2, 8, 0, 0.4);
+        cv::putText(
+            out, cv::format("roll: %.1f", faceRoll  * 180.0/M_PI), 
+            origin += (2.5 * offset), cv::FONT_HERSHEY_PLAIN, 1.2, FaceColor, 1);
     }
 }
