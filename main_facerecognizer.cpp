@@ -131,55 +131,46 @@ int main(int argc, char *argv[])
         // 1. Detect faces
         const auto faceDetectionResults = faceDetector.detect(frame, minConfidence);
 
-        // 2.0. Crop and align faces
-        std::vector<cv::Mat> alignedFaceCrops;
-        alignedFaceCrops.reserve(faceDetectionResults.size());
-        for (const auto& faceDetectionResult : faceDetectionResults)
-        {
-            const cv::Mat faceCrop = frame(faceDetectionResult.boundingBox);
-            if (std::abs(getAngleBetweenEyes(faceDetectionResult.landmarks)) > 45.0)
-            {
-                const cv::Mat alignedFaceCrop = alignFace2(
-                    frame, faceDetectionResult.boundingBox, faceDetectionResult.landmarks, 
-                    FaceExtractor::InputSize, FaceExtractor::ReferencePoints2);
-                alignedFaceCrops.emplace_back(alignedFaceCrop.clone());
-            }
-            else
-            {
-                alignedFaceCrops.emplace_back(faceCrop.clone());
-            }
-        }
-        
-        // 2.1. Extract face embeddings
-        const auto faceEmbeddings = faceExtractor.extract(alignedFaceCrops);
-
-        // 3. Identify faces
         std::vector<Face> faces;
-        faces.reserve(faceEmbeddings.size());
-        for (int i = 0; i < faceEmbeddings.size(); ++i)
-        {
-            int nameId = -1;
-            float sim = -1.0f;
-            std::string name = "unknown";
-            if (personEmbeddings.size() > 0) // if embeddings were loaded from disk
-            {
-                const auto [bestId, bestSim] = searchMostSimilarEmbedding(personEmbeddings, faceEmbeddings[i]);
-                if (bestSim >= minSimilarity)
-                {
-                    nameId = bestId;
-                    name = personNames[bestId];
-                }
-                sim = bestSim;
-            }
-
+        faces.reserve(faceDetectionResults.size());
+        for (int i = 0; i < faceDetectionResults.size(); ++i)
             faces.emplace_back(
                 faceDetectionResults[i].boundingBox,
                 faceDetectionResults[i].landmarks,
                 faceDetectionResults[i].confidence,
-                nameId,
-                std::move(name),
-                sim
+                -1,
+                "unknown",
+                frame(faceDetectionResults[i].boundingBox).clone(),
+                -1.0f
                 );
+        
+        // 2. Extract face embeddings and identify them
+        for (int i = 0; i < faces.size(); ++i)
+        {
+            // 2.1. Extract & idenfity (try #1)
+            auto faceEmbedding = faceExtractor.extract(faces[i].crop);
+            auto [bestId, bestSim] = searchMostSimilarEmbedding(personEmbeddings, faceEmbedding);
+
+            // 2.3. Extract & idenfity (try #2 on aligned face) if the first try failed
+            if (minSimilarity > bestSim)
+            {
+                const cv::Mat alignedFaceCrop = alignFace2(
+                    frame, 
+                    faces.at(i).boundingBox, 
+                    faces.at(i).landmarks, 
+                    faces.at(i).boundingBox.size(), 
+                    FaceExtractor::ReferencePoints2);
+
+                faceEmbedding = faceExtractor.extract(alignedFaceCrop);
+                std::tie(bestId, bestSim) = searchMostSimilarEmbedding(personEmbeddings, faceEmbedding);
+            }
+
+            if (bestSim >= minSimilarity)
+            {
+                faces[i].nameId = bestId;
+                faces[i].name = personNames[bestId];
+                faces[i].similarity = bestSim;
+            }
         }
 
         /* Render results */
