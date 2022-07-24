@@ -99,16 +99,16 @@ double getAngleBetweenEyes(const std::vector<int>& landmarks)
     return std::atan2(dy, dx) * 180.0/M_PI; // Convert from radians to degrees
 }
 
-cv::Mat alignFace(
+cv::Mat alignFace2(
     const cv::Mat& image, cv::Rect faceBoundingBox, const std::vector<int>& landmarks, cv::Size cropSize, 
-    cv::Point2f desiredLeftEye)
+    const cv::Point2f refPoints2[2])
 {
     if (image.empty())
-        throw std::runtime_error("alignFace: Empty image");
+        throw std::runtime_error("alignFace2: Empty image");
     if (faceBoundingBox.empty())
-        throw std::runtime_error("alignFace: Empty faceBoundingBox");
+        throw std::runtime_error("alignFace2: Empty faceBoundingBox");
     if (landmarks.size() < 2)
-        throw std::runtime_error("alignFace: Missing landmark coordinates");
+        throw std::runtime_error("alignFace2: Missing landmark coordinates");
 
     const cv::Point leftEye(landmarks[0], landmarks[1]);
     const cv::Point rightEye(landmarks[2], landmarks[3]);
@@ -122,21 +122,45 @@ cv::Mat alignFace(
     const double len = std::sqrt(dx*dx + dy*dy);
     const double angle = std::atan2(dy, dx) * 180.0/M_PI; // Convert from radians to degrees
 
-    // Hand measurements shown that the left eye center should ideally be at roughly (0.19, 0.14) of a scaled face image
-    const double desiredRightEyeX = (1.0f - desiredLeftEye.x);
     // Get the amount we need to scale the image to be the desired fixed size we want
-    const double desiredLen = (desiredRightEyeX - desiredLeftEye.x) * cropSize.width;
+    const double desiredLen = (refPoints2[1].x - refPoints2[0].x) * cropSize.width;
     const double scale = desiredLen / len;
     // Get the transformation matrix for rotating and scaling the face to the desired angle & size
     cv::Mat R = cv::getRotationMatrix2D(eyesCenter, angle, scale);
     // Shift the center of the eyes to be the desired center between the eyes
     R.at<double>(0, 2) += cropSize.width * 0.5f - eyesCenter.x;
-    R.at<double>(1, 2) += cropSize.height * desiredLeftEye.y - eyesCenter.y;
+    R.at<double>(1, 2) += cropSize.height * refPoints2[0].y - eyesCenter.y;
 
     // Rotate and scale and translate the image to the desired angle & size & position!
     // Note that we use 'w' for the height instead of 'h', because the input face has 1:1 aspect ratio.
     cv::Mat warped = cv::Mat(cropSize, CV_8UC3);
     cv::warpAffine(image, warped, R, warped.size(), cv::INTER_CUBIC);
+
+    return warped;
+}
+
+cv::Mat alignFace3(
+    const cv::Mat& image, cv::Rect faceBoundingBox, const std::vector<int>& landmarks, cv::Size cropSize, 
+    const cv::Point2f refPoints3[3])
+{
+    if (image.empty())
+        throw std::runtime_error("alignFace3: Empty image");
+    if (faceBoundingBox.empty())
+        throw std::runtime_error("alignFace3: Empty faceBoundingBox");
+
+    cv::Point2f srcPoints3[3];
+    srcPoints3[0] = cv::Point2f(landmarks[0], landmarks[1]); // left eye
+    srcPoints3[1] = cv::Point2f(landmarks[2], landmarks[3]); // right eye
+    srcPoints3[2] = cv::Point2f(landmarks[4], landmarks[5]); // nose
+
+    cv::Point2f scaledRefPoints3[3];
+    scaledRefPoints3[0] = cv::Point2f(refPoints3[0].x * faceBoundingBox.width, refPoints3[0].y * faceBoundingBox.height);
+    scaledRefPoints3[1] = cv::Point2f(refPoints3[1].x * faceBoundingBox.width, refPoints3[1].y * faceBoundingBox.height);
+    scaledRefPoints3[2] = cv::Point2f(refPoints3[2].x * faceBoundingBox.width, refPoints3[2].y * faceBoundingBox.height);
+
+    const cv::Mat T = cv::getAffineTransform(srcPoints3, scaledRefPoints3);
+    cv::Mat warped = cv::Mat(cropSize, CV_8UC3);
+    cv::warpAffine(image, warped, T, warped.size(), cv::INTER_CUBIC);
 
     return warped;
 }

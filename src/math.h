@@ -18,12 +18,22 @@ std::vector<float> avgEmbedding(const Matr& embeddings);
 double getAngleBetweenEyes(const std::vector<int>& landmarks);
 
 /** 
- * @brief Rotate, scale and translate face so that the eyes lie on a horizontal line. Inspired by
-https://github.com/MasteringOpenCV/code/blob/master/Chapter8_FaceRecognition/preprocessFace.cpp
+ * @brief Align face using eye points. Rotate, scale and translate face so that the eyes lie on a horizontal line. 
+ * Inspired by https://github.com/MasteringOpenCV/code/blob/master/Chapter8_FaceRecognition/preprocessFace.cpp.
 
     @param cropSize Desired size of the output aligned face
-    @param desiredLeftEye Controls how much of the face is visible after preprocessing
+    @param refPoints2 Controls how much of the face is visible after preprocessing
  */
-cv::Mat alignFace(
+cv::Mat alignFace2(
     const cv::Mat& image, cv::Rect faceBoundingBox, const std::vector<int>& landmarks, cv::Size cropSize, 
-    cv::Point2f desiredLeftEye = cv::Point2f(0.3f, 0.3f));
+    const cv::Point2f refPoints2[2]);
+
+/** 
+ * @brief Align face using eye and nose points.
+
+    @param cropSize Desired size of the output aligned face
+    @param refPoints3 Reference points for calculating affine Transformation
+ */
+cv::Mat alignFace3(
+    const cv::Mat& image, cv::Rect faceBoundingBox, const std::vector<int>& landmarks, cv::Size cropSize, 
+    const cv::Point2f refPoints3[3]);

@@ -137,11 +137,11 @@ int main(int argc, char *argv[])
         for (const auto& faceDetectionResult : faceDetectionResults)
         {
             const cv::Mat faceCrop = frame(faceDetectionResult.boundingBox);
-            if (getAngleBetweenEyes(faceDetectionResult.landmarks) > 45.0)
+            if (std::abs(getAngleBetweenEyes(faceDetectionResult.landmarks)) > 45.0)
             {
-                const cv::Mat alignedFaceCrop = alignFace(
+                const cv::Mat alignedFaceCrop = alignFace2(
                     frame, faceDetectionResult.boundingBox, faceDetectionResult.landmarks, 
-                    FaceExtractor::InputSize, FaceExtractor::DesiredLeftEye);
+                    FaceExtractor::InputSize, FaceExtractor::ReferencePoints2);
                 alignedFaceCrops.emplace_back(alignedFaceCrop.clone());
             }
             else

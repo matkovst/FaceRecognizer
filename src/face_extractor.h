@@ -14,8 +14,16 @@ class FaceExtractor final
 {
 public:
 
-    static inline const cv::Point2f DesiredLeftEye { 0.3155687451f, 0.46157411169f };
     static inline const cv::Size InputSize { 112, 112 };
+    static inline const cv::Point2f ReferencePoints2[2] = {
+        { 0.3155687451f, 0.46157411169f },          // left eye
+        { 1.0f - 0.3155687451f, 0.46157411169f }    // right eye
+    };
+    static inline const cv::Point2f ReferencePoints3[3] = {
+        { 0.3155687451f, 0.46157411169f },          // left eye
+        { 1.0f - 0.3155687451f, 0.46157411169f },   // right eye
+        { 0.50026249885f, 0.64050538196f }          // nose
+    };
 
     using Embedding = std::vector<float>;
 
