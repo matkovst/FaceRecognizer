@@ -7,6 +7,12 @@ FaceRecognizer is a tool for searching and identifying persons on images. It con
 
 The code depends on [OpenCV](https://github.com/opencv/opencv) and [LibTorch](https://pytorch.org/cppdocs/#torchscript) libraries.
 
+## Demos
+
+Frontal result             |  Webcam result
+:-------------------------:|:-------------------------:
+![](dox/frontal_result.gif)  |  ![](dox/webcam_result.gif)
+
 ## Usage
 
 Note that you should have some embeddings database holding person embeddings you want to identify. Without that base FaceRecognizer tool will simply act as a face detector. This base can be created with FaceCollector tool which extracts embeddings from given photos and stores it in .xml file.
