@@ -58,15 +58,18 @@ void renderLandmarks(cv::Mat& out, std::vector<std::vector<int>> landmarks)
 
 void renderFaces(cv::Mat& out, std::vector<Face> faces)
 {
-
     for (const auto face : faces)
     {
+        if (face.boundingBox.empty())
+            continue;
+
         // Bounding box
         renderBorderedBoundingBox(out, face.boundingBox);
 
         // Landmarks
-        for (int i = 0; i < 5; ++i)
-            cv::circle(out, cv::Point(face.landmarks[2 * i], face.landmarks[2 * i + 1]), 1, FaceColor, -1);
+        if (10 == face.landmarks.size())
+            for (int i = 0; i < 5; ++i)
+                cv::circle(out, cv::Point(face.landmarks[2 * i], face.landmarks[2 * i + 1]), 1, FaceColor, -1);
 
         // Person name
         cv::Scalar nameColor = ("unknown" != face.name) ? FaceColor : cv::Scalar(0, 0, 255); 
@@ -97,19 +100,41 @@ void renderFaces(cv::Mat& out, std::vector<Face> faces)
 
         // Render roll circle
         
-        const int radius = 25;
-        origin += (2 * offset);
-        const cv::Point circleCenter = origin + cv::Point(radius, 0);
-        cv::circle(out, circleCenter, radius, FaceColor, 2);
+        if (10 == face.landmarks.size())
+        {
+            const int radius = 25;
+            origin += (2 * offset);
+            const cv::Point circleCenter = origin + cv::Point(radius, 0);
+            cv::circle(out, circleCenter, radius, FaceColor, 2);
 
-        const float faceRoll = getAngleBetweenEyes(face.landmarks) * M_PI/180.0;
-        const cv::Matx22f R( std::cos(faceRoll), -std::sin(faceRoll), std::sin(faceRoll), std::cos(faceRoll) );
-        const cv::Vec2f v = R * cv::Vec2f(0.0f, 1.0f); // (unit-length)
-        const cv::Point pt1 = circleCenter;
-        const cv::Point pt2 = circleCenter - cv::Point(v[0] * radius, v[1] * radius);
-        cv::arrowedLine(out, pt1, pt2, FaceColor, 2, 8, 0, 0.4);
-        cv::putText(
-            out, cv::format("roll: %.1f", faceRoll  * 180.0/M_PI), 
-            origin += (2.5 * offset), cv::FONT_HERSHEY_PLAIN, 1.2, FaceColor, 1);
+            const float faceRoll = getAngleBetweenEyes(face.landmarks) * M_PI/180.0;
+            const cv::Matx22f R( std::cos(faceRoll), -std::sin(faceRoll), std::sin(faceRoll), std::cos(faceRoll) );
+            const cv::Vec2f v = R * cv::Vec2f(0.0f, 1.0f); // (unit-length)
+            const cv::Point pt1 = circleCenter;
+            const cv::Point pt2 = circleCenter - cv::Point(v[0] * radius, v[1] * radius);
+            cv::arrowedLine(out, pt1, pt2, FaceColor, 2, 8, 0, 0.4);
+            cv::putText(
+                out, cv::format("roll: %.1f", faceRoll  * 180.0/M_PI), 
+                origin += (2.5 * offset), cv::FONT_HERSHEY_PLAIN, 1.2, FaceColor, 1);
+        }
     }
+}
+
+cv::Mat renderKfFrame(cv::Size size, cv::Rect real, cv::Rect pred)
+{
+    cv::Mat out = cv::Mat::zeros(size, CV_8UC3);
+    
+    if (!real.empty())
+    {
+        cv::rectangle(out, real, cv::Scalar(0, 255, 0), 2);
+        cv::drawMarker(
+            out, cv::Point(real.x + real.width/2, real.y + real.height/2), cv::Scalar(0, 255, 0));
+    }
+    if (!pred.empty())
+    {
+        cv::rectangle(out, pred, cv::Scalar(0, 0, 255), 2);
+        cv::drawMarker(
+            out, cv::Point(pred.x + pred.width/2, pred.y + pred.height/2), cv::Scalar(0, 0, 255));
+    }
+    return out;
 }

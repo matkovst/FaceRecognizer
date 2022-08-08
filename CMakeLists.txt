@@ -57,4 +57,5 @@ MACRO(add_program NAME MAIN_FILE)
 ENDMACRO()
 
 add_program(FaceRecognizer main_facerecognizer.cpp)
+add_program(FaceRecognizerTracking main_facerecognizer_with_tracking.cpp)
 add_program(FaceCollector main_facecollector.cpp)
