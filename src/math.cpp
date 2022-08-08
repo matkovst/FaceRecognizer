@@ -6,6 +6,33 @@
 
 #include "math.h"
 
+template<typename T>
+cv::Mat vec2mat(const std::vector<std::vector<T>>& vec)
+{
+    const auto rows = vec.size();
+    if (0 == rows)
+        throw std::runtime_error("vec2mat: 0 == rows");
+    const auto cols = vec.at(0).size();
+    if (0 == cols)
+        throw std::runtime_error("vec2mat: 0 == cols");
+
+    int cvType = -1;
+    if (std::is_same<T, std::uint8_t>::value)
+        cvType = CV_8U;
+    else if (std::is_same<T, std::float_t>::value)
+        cvType = CV_32F;
+    else
+        throw std::runtime_error("vec2mat: unsupported T value");
+
+    cv::Mat result(rows, cols, cvType);
+    for (int i = 0; i < rows; ++i)
+        for (int j = 0; j < cols; ++j)
+            result.at<T>(i, j) = vec[i][j];
+    return result;
+}
+template cv::Mat vec2mat<std::uint8_t>(const std::vector<std::vector<std::uint8_t>>& vec);
+template cv::Mat vec2mat<std::float_t>(const std::vector<std::vector<std::float_t>>& vec);
+
 Matr matMult(const Matr& a, const Matr& b)
 {
     if (a.empty() || b.empty())
@@ -163,4 +190,28 @@ cv::Mat alignFace3(
     cv::warpAffine(image, warped, T, warped.size(), cv::INTER_CUBIC);
 
     return warped;
+}
+
+
+PeriodicTrigger::PeriodicTrigger(std::int64_t frequency)
+    : m_frequency(frequency)
+{}
+PeriodicTrigger::~PeriodicTrigger() = default;
+
+bool PeriodicTrigger::rocknroll(std::int64_t now)
+{
+    if (-1 == m_lastTriggered)
+    {
+        m_lastTriggered = now;
+        return true;
+    }
+
+    const auto elapsed = now - m_lastTriggered;
+    if (elapsed >= m_frequency)
+    {
+        m_lastTriggered = now;
+        return true;
+    }
+
+    return false;
 }

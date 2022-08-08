@@ -6,6 +6,9 @@
 
 using Matr = std::vector<std::vector<float>>;
 
+template<typename T>
+cv::Mat vec2mat(const std::vector<std::vector<T>>& vec);
+
 Matr matMult(const Matr& a, const Matr& b);
 
 float cosineSimilarity(const std::vector<float>& a, const std::vector<float>& b);
@@ -37,3 +40,17 @@ cv::Mat alignFace2(
 cv::Mat alignFace3(
     const cv::Mat& image, cv::Rect faceBoundingBox, const std::vector<int>& landmarks, cv::Size cropSize, 
     const cv::Point2f refPoints3[3]);
+
+
+class PeriodicTrigger final
+{
+public:
+    PeriodicTrigger(std::int64_t frequency);
+    ~PeriodicTrigger();
+
+    bool rocknroll(std::int64_t now);
+
+private:
+    std::int64_t m_frequency { -1 };
+    std::int64_t m_lastTriggered { -1 };
+};
