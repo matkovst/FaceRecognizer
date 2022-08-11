@@ -18,9 +18,9 @@ public:
     /**
      * @brief Takes [cx,cy,s,r] and returns it in the cv::Rect form
      */
-    static cv::Rect to_xywh(const cv::Mat& state);
+    static cv::Rect to_xywh(const cv::Mat& state, cv::Rect sceneRect);
 
-    BoxTracker(float measurementNoise = 0.1f);
+    explicit BoxTracker(cv::Size sceneSize, float measurementNoise = 0.1f);
     ~BoxTracker();
 
     void init(cv::Rect bbox);
@@ -48,6 +48,7 @@ private:
     const int StateDim { 7 };
     const int MeasDim { 4 };
     
+    cv::Rect m_sceneRect;
     cv::KalmanFilter m_kf;
     bool m_initialized;
 };

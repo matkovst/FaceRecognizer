@@ -10,7 +10,7 @@ cv::Mat BoxTracker::to_xysr(cv::Rect bbox)
     return cv::Mat_<float>(4, 1) << cx, cy, s, r;
 }
 
-cv::Rect BoxTracker::to_xywh(const cv::Mat& state)
+cv::Rect BoxTracker::to_xywh(const cv::Mat& state, cv::Rect sceneRect)
 {
     const auto cx = state.at<float>(0);
     const auto cy = state.at<float>(1);
@@ -18,11 +18,12 @@ cv::Rect BoxTracker::to_xywh(const cv::Mat& state)
     const auto r = state.at<float>(3);
     const auto w = std::sqrt(s * r);
     const auto h = s / w;
-    return cv::Rect(cx - w/2, cy - h/2, w, h);
+    return cv::Rect(cx - w/2, cy - h/2, w, h) & sceneRect;
 }
 
-BoxTracker::BoxTracker(float measurementNoise)
-    : m_kf(StateDim, MeasDim)
+BoxTracker::BoxTracker(cv::Size sceneSize, float measurementNoise)
+    : m_sceneRect(0, 0, sceneSize.width, sceneSize.height)
+    , m_kf(StateDim, MeasDim)
     , m_initialized(false)
 {
     measurementNoise = std::clamp(measurementNoise, 0.0f, 1.0f);
@@ -60,18 +61,18 @@ cv::Rect BoxTracker::update(cv::Rect bbox)
         if (bbox.empty())
             return cv::Rect();
         init(bbox);
-        return to_xywh(m_kf.statePost);
+        return to_xywh(m_kf.statePost, m_sceneRect);
     }
 
     const auto predState = m_kf.predict();
     if (bbox.empty())
     {
-        return to_xywh(predState);
+        return to_xywh(predState, m_sceneRect);
     }
     else
     {
         const auto corrState = m_kf.correct(to_xysr(bbox));
-        return to_xywh(corrState);
+        return to_xywh(corrState, m_sceneRect);
     }
 }
 

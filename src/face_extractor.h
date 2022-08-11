@@ -27,7 +27,7 @@ public:
 
     using Embedding = std::vector<float>;
 
-    FaceExtractor(const fs::path& modelpath, bool enableGpu = false);
+    explicit FaceExtractor(const fs::path& modelpath, bool enableGpu = false);
     ~FaceExtractor();
 
     Embedding extract(const cv::Mat& faceImage);

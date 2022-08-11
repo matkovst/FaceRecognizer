@@ -200,18 +200,21 @@ PeriodicTrigger::~PeriodicTrigger() = default;
 
 bool PeriodicTrigger::rocknroll(std::int64_t now)
 {
-    if (-1 == m_lastTriggered)
+    if (0 > m_frequency)
+        return false;
+    if (0 == m_frequency)
+        return true;
+
+    if (-1 == m_lastTriggered) // первый заход
     {
         m_lastTriggered = now;
         return true;
     }
 
     const auto elapsed = now - m_lastTriggered;
-    if (elapsed >= m_frequency)
-    {
-        m_lastTriggered = now;
-        return true;
-    }
+    if (elapsed < m_frequency)
+        return false;
 
-    return false;
+    m_lastTriggered = now - (now % m_frequency);
+    return true;
 }

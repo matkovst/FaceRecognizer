@@ -1,3 +1,4 @@
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <algorithm>
@@ -17,7 +18,6 @@ namespace fs = std::filesystem;
 #include "src/face.h"
 
 constexpr float DetectionNoise { 0.1f };
-constexpr std::int64_t DetectionFrequency { 160 }; // msec
 
 const std::string ProgramName { "FaceRecognizer" };
 const std::string CommandLineParams =
@@ -34,6 +34,7 @@ const std::string CommandLineParams =
     "{ sim_thr           |   0.25   | minimal similarity }"
     "{ gpu               |   0      | enable gpu }"
     "{ input_scale       |   1.0    | input resolution scale }"
+    "{ detection_freq    |   500    | detection frequency msec }"
     ;
 
 int main(int argc, char *argv[])
@@ -61,6 +62,7 @@ int main(int argc, char *argv[])
     const auto minSimilarity = parser.get<float>("sim_thr");
     const auto enableGpu = static_cast<bool>(parser.get<int>("gpu"));
     const auto inputScale = parser.get<float>("input_scale");
+    const auto detectionFrequency = static_cast<std::int64_t>(parser.get<int>("detection_freq"));
     
     /* Fetch existing embeddings from disk */
     std::vector<std::string> personNames;
@@ -101,12 +103,6 @@ int main(int argc, char *argv[])
         }
         std::cout << "Loaded " << personEmbeddings.size() << " persons from disk" << std::endl;
     }
-    
-    /* Initialize general stuff */
-    FaceDetector faceDetector(detectorPath, enableGpu);
-    FaceExtractor faceExtractor(recognizerPath, enableGpu);
-    BoxTracker boxTracker(DetectionNoise);
-    PeriodicTrigger trigger(DetectionFrequency);
 
     /* Capture input */
     cv::VideoCapture capture;
@@ -120,8 +116,22 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
     const double fps = std::clamp(capture.get(cv::CAP_PROP_FPS), 1.0, 30.0);
+    cv::Mat frame0;
+    capture >> frame0;
+    if (frame0.empty())
+    {
+        std::cerr << "Empty frame" << std::endl;
+        return EXIT_FAILURE;
+    }
+    
+    /* Initialize general stuff */
+    FaceDetector faceDetector(detectorPath, enableGpu);
+    FaceExtractor faceExtractor(recognizerPath, enableGpu);
+    BoxTracker boxTracker(frame0.size(), DetectionNoise);
+    PeriodicTrigger trigger(detectionFrequency);
 
     /* Start main loop */
+    const auto bigBang = std::chrono::system_clock::now();
     std::int64_t frameNum = 1;
     for (;; ++frameNum)
     {
@@ -133,7 +143,13 @@ int main(int argc, char *argv[])
         if (1.0 != inputScale)
             cv::resize(frame, frame, cv::Size(), inputScale, inputScale);
 
-        const std::int64_t timestamp = (frameNum / fps) * 1000;
+        std::int64_t timestamp = 0;
+        if (frameNum > 1)
+        {
+            const auto elapsedSinceBigBang = std::chrono::system_clock::now();
+            timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+                elapsedSinceBigBang - bigBang).count();
+        }
 
         /* NN magic */
 
