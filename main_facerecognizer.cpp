@@ -13,7 +13,6 @@ namespace fs = std::filesystem;
 #include "src/renderer.h"
 #include "src/math.h"
 #include "src/face.h"
-#include "data/test_embeddings.h"
 
 const std::string ProgramName { "FaceRecognizer" };
 const std::string CommandLineParams =
