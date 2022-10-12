@@ -13,6 +13,7 @@ struct Face final
     std::string name;
     float similarity;
     cv::Mat crop;
+    cv::RotatedRect rotatedBoundingBox;
 
     Face() = default;
     Face(

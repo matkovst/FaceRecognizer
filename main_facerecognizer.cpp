@@ -157,11 +157,14 @@ int main(int argc, char *argv[])
                     frame, 
                     faces.at(i).boundingBox, 
                     faces.at(i).landmarks, 
-                    faces.at(i).boundingBox.size(), 
-                    FaceExtractor::ReferencePoints2);
+                    FaceExtractor::InputSize, 
+                    FaceExtractor::ReferencePoints3);
 
                 faceEmbedding = faceExtractor.extract(alignedFaceCrop);
                 std::tie(bestId, bestSim) = searchMostSimilarEmbedding(personEmbeddings, faceEmbedding);
+
+                faces[i].rotatedBoundingBox = getFaceRotatedBoundingBox(
+                    frame, faces.at(i).boundingBox, faces.at(i).landmarks, FaceExtractor::ReferencePoints3);
             }
 
             if (bestSim >= minSimilarity)
@@ -173,6 +176,16 @@ int main(int argc, char *argv[])
         }
 
         /* Render results */
+        for (const auto& face : faces)
+        {
+            if (face.rotatedBoundingBox.boundingRect().empty())
+                continue;
+
+            cv::Point2f faceRotatedPts[4];
+            face.rotatedBoundingBox.points(faceRotatedPts);
+            for (int j = 0; j < 4; ++j)
+                cv::line(frame, faceRotatedPts[j], faceRotatedPts[(j+1)%4], cv::Scalar::all(255));
+        }
         renderFaces(frame, faces);
         cv::imshow(ProgramName, frame);
 
