@@ -20,16 +20,23 @@ std::vector<float> avgEmbedding(const Matr& embeddings);
 
 double getAngleBetweenEyes(const std::vector<int>& landmarks);
 
+cv::RotatedRect getFaceRotatedBoundingBox(
+    const cv::Mat& image, cv::Rect faceBoundingBox, 
+    const std::vector<int>& landmarks, const cv::Point2f refPoints3[3]);
+
 /** 
  * @brief Align face using eye points. Rotate, scale and translate face so that the eyes lie on a horizontal line. 
  * Inspired by https://github.com/MasteringOpenCV/code/blob/master/Chapter8_FaceRecognition/preprocessFace.cpp.
 
+    @param image input image
+    @param faceBoundingBox face bounding box in input image
+    @param landmarks face landmark points (left eye, right eye, nose, left point of lips, right point of lips)
     @param cropSize Desired size of the output aligned face
-    @param refPoints2 Controls how much of the face is visible after preprocessing
+    @param refPoints3 Controls how much of the face is visible after preprocessing
  */
 cv::Mat alignFace2(
-    const cv::Mat& image, cv::Rect faceBoundingBox, const std::vector<int>& landmarks, cv::Size cropSize, 
-    const cv::Point2f refPoints2[2]);
+    const cv::Mat& image, cv::Rect faceBoundingBox, const std::vector<int>& landmarks, 
+    cv::Size cropSize, const cv::Point2f refPoints3[3]);
 
 /** 
  * @brief Align face using eye and nose points.

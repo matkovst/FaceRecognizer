@@ -126,9 +126,47 @@ double getAngleBetweenEyes(const std::vector<int>& landmarks)
     return std::atan2(dy, dx) * 180.0/M_PI; // Convert from radians to degrees
 }
 
+cv::RotatedRect getFaceRotatedBoundingBox(
+    const cv::Mat& image, cv::Rect faceBoundingBox, 
+    const std::vector<int>& landmarks, const cv::Point2f refPoints3[3])
+{
+    const cv::Point leftEye(landmarks[0], landmarks[1]);
+    const cv::Point rightEye(landmarks[2], landmarks[3]);
+    const cv::Point2f eyesCenter = cv::Point2f(
+        (leftEye.x + rightEye.x) * 0.5f, 
+        (leftEye.y + rightEye.y) * 0.5f);
+    const cv::Point nose(landmarks[4], landmarks[5]);
+
+    // Compute rotated rect size
+
+    const double refWidthBetweenEyes = std::abs(refPoints3[1].x - refPoints3[0].x);
+    const double realWidthBetweenEyes = std::abs(rightEye.x - leftEye.x);
+    const int targetWidth = realWidthBetweenEyes / refWidthBetweenEyes;
+
+    const double refBridgeHeight = std::abs(refPoints3[2].y - refPoints3[0].y);
+    const double realBridgeHeight = std::abs(nose.y - eyesCenter.y);
+    const int targetHeight = realBridgeHeight / refBridgeHeight;
+
+    const cv::Size targetSize(targetWidth, targetHeight);
+
+    // Compute rotated rect center
+
+    const cv::Point2f refShiftRatio1(refPoints3[2] - cv::Point2f(0.5f, 0.5f));
+    const cv::Point2f refShiftRatio2(refPoints3[2] - refPoints3[0]);
+    const cv::Point2f refShiftRatio(refShiftRatio1.x / refShiftRatio2.x, refShiftRatio1.y / refShiftRatio2.y);
+    const cv::Point realShiftRatio2(nose - leftEye);
+    const cv::Point centerShift(realShiftRatio2.x * refShiftRatio.x, realShiftRatio2.y * refShiftRatio.y);
+
+    cv::Point targetCenter(nose - centerShift);
+    targetCenter = nose; // FIXME: not sure the line above is correct, so just use nose as center for now
+
+    const cv::RotatedRect faceRotatedBoundingBox(targetCenter, targetSize, getAngleBetweenEyes(landmarks));
+    return faceRotatedBoundingBox;
+}
+
 cv::Mat alignFace2(
-    const cv::Mat& image, cv::Rect faceBoundingBox, const std::vector<int>& landmarks, cv::Size cropSize, 
-    const cv::Point2f refPoints2[2])
+    const cv::Mat& image, cv::Rect faceBoundingBox, const std::vector<int>& landmarks, 
+    cv::Size cropSize, const cv::Point2f refPoints3[3])
 {
     if (image.empty())
         throw std::runtime_error("alignFace2: Empty image");
@@ -142,6 +180,7 @@ cv::Mat alignFace2(
     const cv::Point2f eyesCenter = cv::Point2f(
         (leftEye.x + rightEye.x) * 0.5f, 
         (leftEye.y + rightEye.y) * 0.5f);
+    const cv::Point nose(landmarks[4], landmarks[5]);
 
     // Get the angle between the eyes
     const double dy = rightEye.y - leftEye.y;
@@ -150,13 +189,13 @@ cv::Mat alignFace2(
     const double angle = std::atan2(dy, dx) * 180.0/M_PI; // Convert from radians to degrees
 
     // Get the amount we need to scale the image to be the desired fixed size we want
-    const double desiredLen = (refPoints2[1].x - refPoints2[0].x) * cropSize.width;
+    const double desiredLen = (refPoints3[1].x - refPoints3[0].x) * cropSize.width;
     const double scale = desiredLen / len;
     // Get the transformation matrix for rotating and scaling the face to the desired angle & size
-    cv::Mat R = cv::getRotationMatrix2D(eyesCenter, angle, scale);
-    // Shift the center of the eyes to be the desired center between the eyes
-    R.at<double>(0, 2) += cropSize.width * 0.5f - eyesCenter.x;
-    R.at<double>(1, 2) += cropSize.height * refPoints2[0].y - eyesCenter.y;
+    cv::Mat R = cv::getRotationMatrix2D(nose, angle, scale);
+    // Shift face center (nose point) to be the desired center at nose point
+    R.at<double>(0, 2) += cropSize.width * refPoints3[2].x - nose.x;
+    R.at<double>(1, 2) += cropSize.height * refPoints3[2].y - nose.y;
 
     // Rotate and scale and translate the image to the desired angle & size & position!
     // Note that we use 'w' for the height instead of 'h', because the input face has 1:1 aspect ratio.
